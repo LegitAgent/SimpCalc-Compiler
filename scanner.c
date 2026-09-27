@@ -1,7 +1,27 @@
 #include <stdio.h>
 #include "scanner.h"
 
+enum State {
+    A,
+    D,
+    DOT,
+    F,
+    E,
+    EXP,
+    SIGN,
+    STR,
+    LT,
+    I,
+    COM,
+    DIV,
+    GT,
+    COL,
+    NEQ,
+    MULT,
+};
+
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
+    enum State state = A;
     int c; // cur char
     // character buffer for digits (string)
     char buffer[256]; // so max digit len would be 255, + 1 for null terminator
