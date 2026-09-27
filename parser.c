@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "parser.h"
+#include "scanner.h"
 
 // read ptr here should be the file of the output file for scanner
 void parser(FILE* file_ptr_r, FILE* file_ptr_w) {

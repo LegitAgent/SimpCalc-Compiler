@@ -20,6 +20,11 @@ enum State {
     MULT,
 };
 
+enum Token tokenList[1000];
+int tokenPtr = 0;
+// when a thing is scanned, put into tokenList the enum Token.
+// i.e. "Chudhalla" gets scanned and recognized as a valid Identifier, we put the Identifier enum into tokenList
+
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     enum State state = A;
     int c; // cur char
@@ -32,4 +37,13 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     while ((c = fgetc(file_ptr_r)) != EOF) {
         
     }
+
+
+}
+
+enum Token gettoken() //only call this after finished scanning
+{
+    enum Token out = tokenList[tokenPtr]; //out is set to tokenList at tokenptr
+    tokenPtr++; // increment token ptr
+    return out;
 }
