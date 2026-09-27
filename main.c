@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include "scanner.h"
+#include "parser.h"
 
 int main() {
     // https://www.geeksforgeeks.org/c/c-program-list-files-sub-directories-directory/
@@ -13,6 +15,12 @@ int main() {
 
     struct dirent *entry;
     while ((entry = readdir(dir_ptr)) != NULL) {
+        // prevent infinite loop, like input_input, just don't name sample files those lmao.
+        if (strstr(entry->d_name, "output_scan") != NULL || 
+            strstr(entry->d_name, "output_parser") != NULL) {
+            continue;
+        }
+        
         // https://www.w3schools.com/c/ref_string_strstr.php
         char *input_pos = strstr(entry->d_name, "input"); // needle in haystack substr is "input" in this case
         // no needle (input) substr
@@ -23,49 +31,66 @@ int main() {
         // find file
         // https://www.geeksforgeeks.org/c/basics-file-handling-c/
         // https://stackoverflow.com/questions/32674141/if-file-pointer-is-null-do-i-have-to-use-fclose-c
-        FILE* file_ptr_r = fopen(entry->d_name, "r");
-        if (file_ptr_r == NULL) {
+        FILE* file_ptr_r_main = fopen(entry->d_name, "r");
+        if (file_ptr_r_main == NULL) {
             printf("Unknown file name, could not locate file.\n");
             return 1;
         }
 
         // https://www.geeksforgeeks.org/c/snprintf-c-library/
         // https://www.geeksforgeeks.org/c/format-specifiers-in-c/
-        char output_name[256]; // name max = 256 characters
+        char output_name_scanner[256]; // name max = 256 characters
         size_t before_input_len = input_pos - entry->d_name; // subtraction of mem addresses
 
-        // write to output_name with format (TODO: scanner part)
-        snprintf(output_name, // buffer to append
-            sizeof(output_name), // size of buffer
-            "%.*soutput%s", // string format - length (int) + string1 + literal "output" + string2, .* = int length of str
+        // write to output_name with format
+        snprintf(output_name_scanner, // buffer to append
+            sizeof(output_name_scanner), // size of buffer
+            "%.*soutput_scan%s", // string format - length (int) + string1 + literal "output" + string2, .* = int length of str
             (int) before_input_len,
             entry->d_name,
             input_pos + strlen("input") // everything after "input"
         );
 
-        FILE* file_ptr_w = fopen(output_name,"w");
-        if (file_ptr_w == NULL) {
+        FILE* file_ptr_w_scanner = fopen(output_name_scanner,"w");
+        if (file_ptr_w_scanner == NULL) {
             printf("Could not create file.\n");
+            fclose(file_ptr_r_main);
+            return 1;
+        }
+        // get the tokens, parse them to a txt file
+        scanner(file_ptr_r_main, file_ptr_w_scanner);
+        fclose(file_ptr_w_scanner);
+        fclose(file_ptr_r_main);
+        
+        FILE* file_ptr_r_scanner = fopen(output_name_scanner,"r");
+        if (file_ptr_r_scanner == NULL) {
+            printf("Unknown file name, could not locate file.\n");
             return 1;
         }
 
-        int c; // cur char
-        // character buffer for digits (string)
-        char buffer[256]; // so max digit len would be 255, + 1 for null terminator
-        int buffer_idx = 0;
+        char output_name_parser[256]; // name max = 256 characters
 
-        // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
-        // iterate over file character by character
-        // scanner while
-        while ((c = fgetc(file_ptr_r)) != EOF) {
-            
+        // write to output_name with format
+        snprintf(output_name_parser,
+            sizeof(output_name_parser),
+            "%.*soutput_parser%s",
+            (int) before_input_len,
+            entry->d_name,
+            input_pos + strlen("input")
+        );
+
+        FILE* file_ptr_w_parser = fopen(output_name_parser,"w");
+        if (file_ptr_w_parser == NULL) {
+            printf("Could not create file.\n");
+            fclose(file_ptr_r_scanner);
+            return 1;
         }
 
-        // get the file we just wrote, read that
-        // read off of scanner
+        parser(file_ptr_r_scanner, file_ptr_w_parser);
 
-        fclose(file_ptr_r); // close for no memory leak
-        fclose(file_ptr_w);
+        // close for no memory leak
+        fclose(file_ptr_r_scanner);
+        fclose(file_ptr_w_parser);
     }
     closedir(dir_ptr);
 }
