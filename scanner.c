@@ -35,7 +35,43 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
     // iterate over file character by character
     while ((c = fgetc(file_ptr_r)) != EOF) {
-        
+        switch(state)
+        {
+            case A:
+                break;
+            case D:
+                break;
+            case DOT:
+                break;
+            case F:
+                break;
+            case E:
+                break;
+            case EXP:
+                break;
+            case SIGN:
+                break;
+            case STR:
+                break;
+            case LT:
+                break;
+            case I:
+                break;
+            case COM:
+                break;
+            case DIV:
+                break;
+            case GT:
+                break;
+            case COL:
+                break;
+            case NEQ:
+                break;
+            case MULT:
+                break;
+            default: // ERROR STATE
+                break;
+        }
     }
 
 

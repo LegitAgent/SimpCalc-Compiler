@@ -25,7 +25,7 @@ enum Token
     GTEqual,
     NotEqual,
     PRINT,
-    
+    ERROR,
     // Unique Identifier Tokens
     IF,
     ELSE,
