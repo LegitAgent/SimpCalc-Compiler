@@ -2,8 +2,7 @@
 #define SCANNER_H
 
 #include <stdio.h>
-enum Token
-{
+enum Token {
     Identifier,
     Number,
     String,
@@ -24,9 +23,9 @@ enum Token
     LTEqual,
     GTEqual,
     NotEqual,
-    PRINT,
     ERROR,
     // Unique Identifier Tokens
+    PRINT,
     IF,
     ELSE,
     ENDIF,
@@ -39,6 +38,6 @@ enum Token
 
 void scanner(FILE* read, FILE* write);
 
-enum FinalState gettoken();
+enum Token gettoken();
 
 #endif
