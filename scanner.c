@@ -38,6 +38,18 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
         switch(state)
         {
             case A:
+                if (c == '<')
+                    state = LT;
+                else if (c == '>')
+                    state = GT;
+                else if (c == '/')
+                    state = DIV;
+                else if (c == ':')
+                    state = COL;
+                else if (c == '!')
+                    state = NEQ;
+                else if (c == '*')
+                    state = MULT;
                 break;
             case D:
                 break;
@@ -54,20 +66,100 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
             case STR:
                 break;
             case LT:
+                if (c == '=') {
+                    // reset state and push to tokenList the token LTEqual
+                    state = A;
+                    tokenList[tokenPtr] = LTEqual;
+                    tokenPtr++;
+                }
+                else{
+                    // reset state and push to tokenList the token LessThan
+                    // do push back
+                    state = A;
+                    tokenList[tokenPtr] = LessThan;
+                    tokenPtr++;
+                    //[TODO: PUSHBACK IDK HOW YOU IMPLEMENTED THIS THING ALBA]
+                }
                 break;
             case I:
                 break;
             case COM:
+                if (c == '\n')
+                    state = A; // reset state if newline
                 break;
             case DIV:
+                if (c == '/')
+                    // set state to COM
+                    state = COM;
+                else {
+                    // reset state and push to tokenList the token Divide
+                    // do push back
+                    state = A;
+                    tokenList[tokenPtr] = Divide;
+                    tokenPtr++;
+                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                }
                 break;
             case GT:
+                if (c == '=') {
+                    // reset state and push to tokenList the token GTEqual
+                    state = A;
+                    tokenList[tokenPtr] = GTEqual;
+                    tokenPtr++;
+                }
+                else {
+                    // reset state and push to tokenList the token GreaterThan
+                    // do push back
+                    state = A;
+                    tokenList[tokenPtr] = GreaterThan;
+                    tokenPtr++;
+                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                }
                 break;
             case COL:
+                if (c == '=') {
+                    // reset state and push to tokenList the token Assign
+                    state = A;
+                    tokenList[tokenPtr] = Assign;
+                    tokenPtr++;
+                }
+                else {
+                    // reset state and push to tokenList the token Colon
+                    // do push back
+                    state = A;
+                    tokenList[tokenPtr] = Colon;
+                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                }
                 break;
             case NEQ:
+                if (c == '=') {
+                    // reset state and push to tokenList the token NotEqual
+                    state = A;
+                    tokenList[tokenPtr] = NotEqual;
+                    tokenPtr++;
+                }
+                else {
+                    // set to error state push to tokenList the token ERROR
+                    state = ERROR;
+                    tokenList[tokenPtr] = ERROR;
+                    tokenPtr++;
+                }
                 break;
             case MULT:
+                if (c == '*') {
+                    // reset state and push to tokenList the token Raise
+                    state = A;
+                    tokenList[tokenPtr] = Raise;
+                    tokenPtr++;
+                }
+                else {
+                    // reset state and push to tokenList the token Multiply
+                    // do pushback
+                    state = A;
+                    tokenList[tokenPtr] = Multiply;
+                    tokenPtr++;
+                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                }
                 break;
             default: // ERROR STATE
                 break;
