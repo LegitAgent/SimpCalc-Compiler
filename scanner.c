@@ -74,6 +74,35 @@ void finishScanLine(FILE* file_ptr_w, enum TokenType type, const char *scanType)
     if (state != ERRORs) fprintf(file_ptr_w, "%s\t%s\n", scanType, buffer);
 }
 
+void checkKeyword(enum TokenType* type, char** scanType) {
+    buffer[bufferIdx] = '\0';
+    if (strcmp(buffer, "PRINT") == 0) {
+        *type = PRINT;
+        *scanType = "Print";
+    } else if (strcmp(buffer, "IF") == 0) {
+        *type = IF;
+        *scanType = "If";
+    } else if (strcmp(buffer, "ELSE") == 0) {
+        *type = ELSE;
+        *scanType = "Else";
+    } else if (strcmp(buffer, "ENDIF") == 0) {
+        *type = ENDIF;
+        *scanType = "Endif";
+    } else if (strcmp(buffer, "SQRT") == 0) {
+        *type = SQRT;
+        *scanType = "Sqrt";
+    } else if (strcmp(buffer, "AND") == 0) {
+        *type = AND;
+        *scanType = "And";
+    } else if (strcmp(buffer, "OR") == 0) {
+        *type = OR;
+        *scanType = "Or";
+    } else if (strcmp(buffer, "NOT") == 0) {
+        *type = NOT;
+        *scanType = "Not";
+    }
+}
+
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
 
     int c; // cur char
@@ -231,31 +260,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 } else {
                     enum TokenType type = Identifier;
                     char *scanType = "Identifier";
-                    if (strcmp(buffer, "PRINT") == 0) {
-                        type = PRINT;
-                        scanType = "Print";
-                    } else if (strcmp(buffer, "IF") == 0) {
-                        type = IF;
-                        scanType = "If";
-                    } else if (strcmp(buffer, "ELSE") == 0) {
-                        type = ELSE;
-                        scanType = "Else";
-                    } else if (strcmp(buffer, "ENDIF") == 0) {
-                        type = ENDIF;
-                        scanType = "Endif";
-                    } else if (strcmp(buffer, "SQRT") == 0) {
-                        type = SQRT;
-                        scanType = "Sqrt";
-                    } else if (strcmp(buffer, "AND") == 0) {
-                        type = AND;
-                        scanType = "And";
-                    } else if (strcmp(buffer, "OR") == 0) {
-                        type = OR;
-                        scanType = "Or";
-                    } else if (strcmp(buffer, "NOT") == 0) {
-                        type = NOT;
-                        scanType = "Not";
-                    }
+                    checkKeyword(&type, &scanType);
                     finishScanLine(file_ptr_w, type, scanType);
 
                     ungetc(c, file_ptr_r);
@@ -327,8 +332,11 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
         case EXP:
             finishScanLine(file_ptr_w, Number, "Number");
             break;
-        case I:
-            finishScanLine(file_ptr_w, Identifier, "Identifier");
+        case I: ;
+            enum TokenType type = Identifier;
+            char *scanType = "Identifier";
+            checkKeyword(&type, &scanType);
+            finishScanLine(file_ptr_w, type, scanType);
             break;
         case LT:
             addToken(LessThan, "<");
