@@ -38,6 +38,6 @@ enum Token {
 
 void scanner(FILE* read, FILE* write);
 
-enum Token gettoken();
+enum Token getToken();
 
 #endif

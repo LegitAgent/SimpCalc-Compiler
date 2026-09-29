@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "scanner.h"
 
 enum State {
@@ -22,23 +23,62 @@ enum State {
     EOFs
 };
 
-enum Token tokenList[1000];
+typedef struct {
+    enum Token type;
+    char lexeme[256]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
+} Token;
+
+Token tokenList[10000];
 int tokenIdx = 0;
-// when a thing is scanned, put into tokenList the enum Token.
-// i.e. "Chudhalla" gets scanned and recognized as a valid Identifier, we put the Identifier enum into tokenList
+
+// character buffer for stmt (string)
+char buffer[4096]; // so max stmt len would be 4095, + 1 for null terminator
+int bufferIdx = 0;
+enum State state = A; // DEFAULT STATE
+
+void setDefaultStates() {
+    bufferIdx = 0;
+    state = A;
+}
+
+// Adds a specific token to the token list, with a token type and token contents
+void addToken(enum Token type, const char *lexeme) {
+    tokenList[tokenIdx].type = type;
+    strcpy(tokenList[tokenIdx].lexeme, lexeme);
+    tokenIdx++;
+
+    setDefaultStates();
+}
+
+void finishScanLine(FILE* file_ptr_w, enum Token type, const char *scanType) {
+    buffer[bufferIdx] = '\0';
+    fprintf(file_ptr_w, "%s\t%s\n", scanType, buffer);
+    addToken(type, buffer);
+
+}
 
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
-    enum State state = A;
+    
     int c; // cur char
-    // character buffer for stmt (string)
-    char buffer[256]; // so max stmt len would be 255, + 1 for null terminator
-    int buffer_idx = 0;
-
+    setDefaultStates();
     // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
     // iterate over file character by character
+    
     while ((c = fgetc(file_ptr_r)) != EOF) {
         if (state == ERRORs) {
             printf("Error.");
+            break;
+        }
+
+        if (tokenIdx > 10000) {
+            fputs("Exceeded token limit.", file_ptr_w);
+            addToken(ERROR, "Exceeded token limit");
+            break;
+        }
+
+        if (bufferIdx > 4096) {
+            fputs("Exceeded statement length.", file_ptr_w);
+            addToken(ERROR, "Exceeded statement length.");
             break;
         }
 
@@ -51,136 +91,94 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c == '!') state = NEQ;
                 else if (c == '*') state = MULT;
                 else if (c == '(') {
-                    fputs("LeftParen\t(\n", file_ptr_w);
-
-                    tokenList[tokenIdx++] = LeftParen;
-                }
-                else if (c == ')') {
+                    fputs("LeftParen\t(\n", file_ptr_w); // put in scanner file
+                    addToken(LeftParen, "("); // put in token list
+                } else if (c == ')') {
                     fputs("RightParen\t)\n", file_ptr_w);
-
-                    tokenList[tokenIdx++] = RightParen;
-                }
-                else if (c == '-') {
+                    addToken(RightParen, ")");
+                } else if (c == '-') {
                     fputs("Minus\t-\n", file_ptr_w);
-
-                    tokenList[tokenIdx++] = Minus;
-                }
-                else if (c == '+') {
+                    addToken(Minus, "-");
+                } else if (c == '+') {
                     fputs("Plus\t+\n", file_ptr_w);
-
-                    tokenList[tokenIdx++] = Plus;
-                }
-                else if (c == ';') {
+                    addToken(Plus, "+");
+                } else if (c == ';') {
                     fputs("Semicolon\t;\n", file_ptr_w);
-
-                    tokenList[tokenIdx++] = Semicolon;
-                }
-                else if (c == ',') {
+                    addToken(Semicolon, ";");
+                } else if (c == ',') {
                     fputs("Comma\t,\n", file_ptr_w);
-                    
-                    tokenList[tokenIdx++] = Comma;
-                }
-                else if (c == '"') {
+                    addToken(Comma, ",");
+                } else if (c == '"') {
                     state = STR;
-                    buffer[buffer_idx++] = c;
-                }
-                else if (c >= '0' && c <= '9') {
+                    buffer[bufferIdx++] = c;
+                } else if (c >= '0' && c <= '9') {
                     state = D;
-                    buffer[buffer_idx++] = c;
-                }
-                else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+                    buffer[bufferIdx++] = c;
+                } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
                     state = I;
-                    buffer[buffer_idx++] = c;
+                    buffer[bufferIdx++] = c;
                 }
                 break;
             case D:
                 if (c >= '0' && c <= '9') {
                     state = D;
 
-                    buffer[buffer_idx++] = c;
-                }
-                else if (c == '.') {
+                    buffer[bufferIdx++] = c;
+                } else if (c == '.') {
                     state = DOT;
 
-                    buffer[buffer_idx++] = c;
-                }
-                else if (c == 'e' || c == 'E') {
+                    buffer[bufferIdx++] = c;
+                } else if (c == 'e' || c == 'E') {
                     state = E;
 
-                    buffer[buffer_idx++] = c;
-                }
-                else {
-                    buffer[buffer_idx] = '\0';
-                    fprintf(file_ptr_w, "Number\t%s\n", buffer);
-                    buffer_idx = 0;
+                    buffer[bufferIdx++] = c;
+                } else {
+                    finishScanLine(file_ptr_w, Number, "Number");
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = Number;
-    
                     ungetc(c, file_ptr_r);
                 }
                 break;
             case DOT:
                 if (c >= '0' && c <= '9') {
                     state = F;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
+                    buffer[bufferIdx++] = c;
+                } else {
                     state = ERRORs;
-                    tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;;
+                    
+                    addToken(ERROR, "Error.");
                 }
                 break;
             case F:
                 if (c >= '0' && c <= '9') {
                     state = F;
-                    buffer[buffer_idx++] = c;
-                }
-                else if (c == 'e' || c == 'E') {
+                    buffer[bufferIdx++] = c;
+                } else if (c == 'e' || c == 'E') {
                     state = E;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
-                    buffer[buffer_idx] = '\0';
-                    fprintf(file_ptr_w, "Number\t%s\n", buffer);
-                    buffer_idx = 0;
-
-                    state = A;
+                    buffer[bufferIdx++] = c;
+                } else {
+                    finishScanLine(file_ptr_w, Number, "Number");
                 
-                    tokenList[tokenIdx++] = Number;
-
                     ungetc(c, file_ptr_r);
                 }
                 break;
             case E:
                 if (c == '+' || c == '-') {
                     state = SIGN;
-                    buffer[buffer_idx++] = c;
-                }
-                else if (c >= '0' && c <= '9') {
+                    buffer[bufferIdx++] = c;
+                } else if (c >= '0' && c <= '9') {
                     state = EXP;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
+                    buffer[bufferIdx++] = c;
+                } else {
                     state = ERRORs;
-                    tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;
+                    addToken(ERROR, "Error.");
                 }
                 break;
             case EXP:
                 if (c >= '0' && c <= '9') {
                     state = EXP;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
-                    buffer[buffer_idx] = '\0';
-                    fprintf(file_ptr_w, "Number\t%s\n", buffer);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = Number;
+                    buffer[bufferIdx++] = c;
+                } else {
+                    finishScanLine(file_ptr_w, Number, "Number");
 
                     ungetc(c, file_ptr_r);
                 }
@@ -188,58 +186,36 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
             case SIGN:
                 if (c >= '0' && c <= '9') {
                     state = EXP;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
+                    buffer[bufferIdx++] = c;
+                } else {
                     state = ERRORs;
-                    tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;
+                    addToken(ERROR, "Error.");
                 }
                 break;
             case STR:
                 if (c == '"') {
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
-                    fprintf(file_ptr_w, "String\t%s\n", buffer);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = String;
-                }
-                else if (c == '\n') {
+                    finishScanLine(file_ptr_w, String, "String");
+                } else if (c == '\n') {
                     state = ERRORs;
-                    tokenList[tokenIdx] = ERROR;
-                }
-                else {
+                    addToken(ERROR, "Error.");
+                } else {
                     state = STR;
-                    buffer[buffer_idx++] = c;
+                    buffer[bufferIdx++] = c;
                 }
                 break;
             case LT:
                 // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
                     // reset state and push to tokenList the token LTEqual
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
                     fputs("LessThan\t<=\n", file_ptr_w);
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = LTEqual;
+                    addToken(LTEqual, "<=");
                 } else {
                     // reset state and push to tokenList the token LessThan
                     // do push back
-                    buffer[buffer_idx] = '\0';
-
                     fputs("LessThan\t<\n", file_ptr_w);
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = LessThan;
-
+                    addToken(LessThan, "<");
                     ungetc(c, file_ptr_r);
                 }
                 break;
@@ -249,20 +225,10 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     (c >= '0' && c <= '9') ||
                     c == '_') {
                     state = I;
-                    buffer[buffer_idx++] = c;
-                }
-                else {
-                    // text put
-                    buffer[buffer_idx] = '\0';
-                    fprintf(file_ptr_w, "Identifier\t%s\n", buffer);
-                    buffer_idx = 0;
+                    buffer[bufferIdx++] = c;
+                } else {
+                    finishScanLine(file_ptr_w, Identifier, "Identifier");
 
-                    state = A;
-                    
-                    // parse token
-                    tokenList[tokenIdx++] = Identifier;
-
-                    // pushback
                     ungetc(c, file_ptr_r);
                 }
                 break;
@@ -274,122 +240,52 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 if (c == '/') {
                     // set state to COM
                     state = COM;
-                }
-                else {
-                    // reset state and push to tokenList the token Divide
-                    // do push back
-                    buffer[buffer_idx] = '\0';
-                    fprintf(file_ptr_w, "Divide\t%s\n", buffer);
-                    buffer_idx = 0;
+                } else {
+                    fputs("Divide\t/\n", file_ptr_w);
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = Divide;
-
+                    addToken(Divide, "/");
                     ungetc(c, file_ptr_r);
                 }
                 break;
             case GT:
                 if (c == '=') {
                     // reset state and push to tokenList the token GTEqual
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
                     fputs("GreaterThan\t>=\n", file_ptr_w);
-                    buffer_idx = 0;
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = GTEqual;
-                }
-                else {
-                    // reset state and push to tokenList the token GreaterThan
-                    // do push back
-                    buffer[buffer_idx] = '\0';
-
+                    addToken(GTEqual, ">=");
+                } else {
                     fputs("GreaterThan\t>\n", file_ptr_w);
-                    buffer_idx = 0;
 
-                    state = A;
-
-                    tokenList[tokenIdx++] = GreaterThan;
-
+                    addToken(GreaterThan, ">");
                     ungetc(c, file_ptr_r);
                 }
                 break;
             case COL:
                 if (c == '=') {
-                    // reset state and push to tokenList the token Assign
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
                     fputs("Assign\t:=\n", file_ptr_w);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = Assign;
-                }
-                else {
-                    // reset state and push to tokenList the token Colon
-                    // do push back
-                    buffer[buffer_idx] = '\0';
-
+                    addToken(Assign, ":=");
+                } else {
                     fputs("Colon\t:\n", file_ptr_w);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = Colon;
-
+                    addToken(Colon, ":");
                     ungetc(c, file_ptr_r);
                 }
                 break;
             case NEQ:
                 if (c == '=') {
-                    // reset state and push to tokenList the token NotEqual
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
                     fputs("NotEqual\t!=\n", file_ptr_w);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = NotEqual;
-                }
-                else {
-                    // set to error state push to tokenList the token ERROR
+                    addToken(NotEqual, "!=");
+                } else {
                     state = ERRORs;
-                    tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;
+                    addToken(ERROR, "Error.");
                 }
                 break;
             case MULT:
                 if (c == '*') {
-                    // reset state and push to tokenList the token Raise
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
                     fputs("Raise\t**\n", file_ptr_w);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = Raise;
-                }
-                else {
-                    // reset state and push to tokenList the token Multiply
-                    // do pushback
-                    buffer[buffer_idx] = '\0';
-
+                    addToken(Raise, "**");
+                } else {
                     fputs("Multiply\t*\n", file_ptr_w);
-                    buffer_idx = 0;
-
-                    state = A;
-
-                    tokenList[tokenIdx++] = Multiply;
-
+                    addToken(Multiply, "*");
                     ungetc(c, file_ptr_r);
                 }
                 break;
@@ -398,13 +294,11 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 break;
         }
     }
-
-
+    fputs("EndOfFile\n", file_ptr_w);
 }
 
-enum Token gettoken() //only call this after finished scanning
-{
-    enum Token out = tokenList[tokenIdx]; // out is set to tokenList at tokenptr
-    tokenIdx++; // increment token ptr
-    return out;
-}
+// enum Token getToken() {
+//     // enum Token out = tokenList[tokenIdx]; // out is set to tokenList at tokenptr
+//     tokenIdx++; // increment token ptr
+//     // return out;
+// }
