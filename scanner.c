@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include "scanner.h"
 
 enum State {
@@ -23,11 +24,6 @@ enum State {
     EOFs
 };
 
-typedef struct {
-    enum Token type;
-    char lexeme[256]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
-} Token;
-
 Token tokenList[10000];
 int tokenIdx = 0;
 static int tokenReadIdx = 0; // for tracking which token to read
@@ -43,7 +39,7 @@ void setDefaultStates() {
 }
 
 // adds a specific token to the token list, with a token type and token contents
-void addToken(enum Token type, const char *lexeme) {
+void addToken(enum TokenType type, const char *lexeme) {
     const int tokenCapacity = (int)(sizeof(tokenList) / sizeof(tokenList[0]));
     if (state == ERRORs) return;
 
@@ -72,21 +68,21 @@ static void appendCharacter(int c) {
     buffer[bufferIdx++] = (char)c;
 }
 
-void finishScanLine(FILE* file_ptr_w, enum Token type, const char *scanType) {
+void finishScanLine(FILE* file_ptr_w, enum TokenType type, const char *scanType) {
     buffer[bufferIdx] = '\0';
     addToken(type, buffer);
     if (state != ERRORs) fprintf(file_ptr_w, "%s\t%s\n", scanType, buffer);
 }
 
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
-    
+
     int c; // cur char
     tokenIdx = 0;
     tokenReadIdx = 0;
     setDefaultStates();
     // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
     // iterate over file character by character
-    
+
     while (state != ERRORs && (c = fgetc(file_ptr_r)) != EOF) {
         switch(state) {
             case A:
@@ -123,6 +119,11 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
                     state = I;
                     appendCharacter(c);
+                } else if (isspace(c)) {
+                    // https://www.geeksforgeeks.org/c/isspace-in-c/
+                    // whitespace separates tokens, stuff like tabs, new lines as well
+                } else {
+                    addToken(ERROR, "Invalid character.");
                 }
                 break;
             case D:
@@ -149,7 +150,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = F;
                     appendCharacter(c);
                 } else {
-                    addToken(ERROR, "Error.");
+                    addToken(ERROR, "Should be followed by digits.");
                 }
                 break;
             case F:
@@ -161,7 +162,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     appendCharacter(c);
                 } else {
                     finishScanLine(file_ptr_w, Number, "Number");
-                
+
                     ungetc(c, file_ptr_r);
                 }
                 break;
@@ -173,7 +174,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = EXP;
                     appendCharacter(c);
                 } else {
-                    addToken(ERROR, "Error.");
+                    addToken(ERROR, "Should followed by a + or -, or digits.");
                 }
                 break;
             case EXP:
@@ -191,7 +192,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = EXP;
                     appendCharacter(c);
                 } else {
-                    addToken(ERROR, "Error.");
+                    addToken(ERROR, "Should be followed by digits.");
                 }
                 break;
             case STR:
@@ -200,7 +201,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     if (state == ERRORs) break;
                     finishScanLine(file_ptr_w, String, "String");
                 } else if (c == '\n') {
-                    addToken(ERROR, "Error.");
+                    addToken(ERROR, "Should end with a quoatation mark.");
                 } else {
                     state = STR;
                     appendCharacter(c);
@@ -211,7 +212,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 if (c == '=') {
                     // reset state and push to tokenList the token LTEqual
                     addToken(LTEqual, "<=");
-                    if (state != ERRORs) fputs("LessThan\t<=\n", file_ptr_w);
+                    if (state != ERRORs) fputs("LTEqual\t<=\n", file_ptr_w);
                 } else {
                     // reset state and push to tokenList the token LessThan
                     // do push back
@@ -251,7 +252,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 if (c == '=') {
                     // reset state and push to tokenList the token GTEqual
                     addToken(GTEqual, ">=");
-                    if (state != ERRORs) fputs("GreaterThan\t>=\n", file_ptr_w);
+                    if (state != ERRORs) fputs("GTEqual\t>=\n", file_ptr_w);
                 } else {
                     addToken(GreaterThan, ">");
                     if (state != ERRORs) fputs("GreaterThan\t>\n", file_ptr_w);
@@ -273,7 +274,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     addToken(NotEqual, "!=");
                     if (state != ERRORs) fputs("NotEqual\t!=\n", file_ptr_w);
                 } else {
-                    addToken(ERROR, "Error.");
+                    addToken(ERROR, "Should be followed by an =.");
                 }
                 break;
             case MULT:
@@ -287,11 +288,11 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 }
                 break;
             default: // ERROR STATE
-                addToken(ERROR, "Error.");
+                addToken(ERROR, "Unknown case, error.");
                 break;
         }
     }
-    
+
     // finish tokens that have no trailing delimiter, i.e. EOF while incomplete
     switch (state) {
         case D:
@@ -338,7 +339,12 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     fputs("EndOfFile\n", file_ptr_w);
 }
 
-enum Token getToken(void) {
-    if (tokenReadIdx >= tokenIdx) return EndofFile;
-    return tokenList[tokenReadIdx++].type;
+// gets a token using a static token reading variable
+Token getToken() {
+    if (tokenReadIdx >= tokenIdx) {
+        Token eof = {EndofFile, "End of File."};
+        return eof;
+    }
+
+    return tokenList[tokenReadIdx++];
 }
