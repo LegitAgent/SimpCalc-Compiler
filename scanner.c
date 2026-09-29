@@ -105,8 +105,8 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 }
                 break;
             case SIGN:
-                if (c == '+' || c == '-')
-                    state = SIGN;
+                if (c >= '0' && c <= '9') 
+                    state = EXP;
                 else {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
