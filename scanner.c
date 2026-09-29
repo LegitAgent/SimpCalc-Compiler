@@ -50,6 +50,9 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c == ':') state = COL;
                 else if (c == '!') state = NEQ;
                 else if (c == '*') state = MULT;
+                else if (c == '"') state = STR;
+                else if (c >= '0' && c <= '9') state = D;
+                else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') state = I;
                 break;
             case D:
                 if (c >= '0' && c <= '9')
@@ -62,6 +65,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = Number;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case DOT:
@@ -71,6 +75,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case F:
@@ -82,6 +87,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = Number;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case E:
@@ -93,6 +99,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case EXP:
@@ -102,6 +109,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = Number;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case SIGN:
@@ -111,6 +119,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case STR:
