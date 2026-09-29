@@ -23,9 +23,10 @@ enum State {
     MULT
 };
 
-static char buffer[4096];
+// character buffer for stmt (string)
+static char buffer[4096]; // so max stmt len would be 4095, + 1 for null terminator
 static int bufferIdx;
-static enum State state = A;
+static enum State state = A; // DEFAULT STATE
 
 static void setDefaultStates(void) {
     bufferIdx = 0;
@@ -34,6 +35,7 @@ static void setDefaultStates(void) {
 
 static Token makeToken(enum TokenType type, const char *lexeme) {
     Token token;
+
     if (strlen(lexeme) >= sizeof(token.lexeme)) {
         type = ERROR;
         lexeme = "Exceeded lexeme length (4095 characters).";
@@ -112,8 +114,10 @@ static Token writeIdentifier(FILE *output) {
 }
 
 Token gettoken(FILE *input, FILE *output) {
-    int c;
+    int c; // cur char
     Token overflow;
+    // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
+    // iterate over file character by character
     while ((c = fgetc(input)) != EOF) {
         switch (state) {
             case A:
@@ -156,7 +160,10 @@ Token gettoken(FILE *input, FILE *output) {
                     if (!appendCharacter(c, &overflow)) {
                         return writeOverflow(output, overflow);
                     }
-                } else if (!isspace(c)) {
+                } else if (isspace(c)) {
+                    // https://www.geeksforgeeks.org/c/isspace-in-c/
+                    // whitespace separates tokens, stuff like tabs, new lines as well
+                } else {
                     return writeToken(output, ERROR, "ERROR", "Invalid character.");
                 }
                 break;
@@ -254,9 +261,13 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case LT:
+                // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
+                    // reset state and push to tokenList the token LTEqual
                     return writeToken(output, LTEqual, "LTEqual", "<=");
                 }
+                // reset state and push to tokenList the token LessThan
+                // do push back
                 ungetc(c, input);
                 return writeToken(output, LessThan, "LessThan", "<");
             case I:
@@ -272,11 +283,12 @@ Token gettoken(FILE *input, FILE *output) {
                 break;
             case COM:
                 if (c == '\n') {
-                    state = A;
+                    state = A; // reset state if newline
                 }
                 break;
             case DIV:
                 if (c == '/') {
+                    // set state to COM
                     state = COM;
                 } else {
                     ungetc(c, input);
@@ -285,6 +297,7 @@ Token gettoken(FILE *input, FILE *output) {
                 break;
             case GT:
                 if (c == '=') {
+                    // reset state and push to tokenList the token GTEqual
                     return writeToken(output, GTEqual, "GTEqual", ">=");
                 }
                 ungetc(c, input);
@@ -308,6 +321,7 @@ Token gettoken(FILE *input, FILE *output) {
                 return writeToken(output, Multiply, "Multiply", "*");
         }
     }
+    // finish tokens that have no trailing delimiter, i.e. EOF while incomplete
     switch (state) {
         case D:
         case F:
