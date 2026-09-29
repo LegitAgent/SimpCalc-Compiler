@@ -52,7 +52,10 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c == '*') state = MULT;
                 else if (c == '"') state = STR;
                 else if (c >= '0' && c <= '9') state = D;
-                else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') state = I;
+                else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+                    state = I;
+                    buffer[buffer_idx++] = c;
+                }
                 break;
             case D:
                 if (c >= '0' && c <= '9')
@@ -137,12 +140,14 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
                     // reset state and push to tokenList the token LTEqual
+                    fputs("LessThan\t<=\n", file_ptr_w);
                     state = A;
                     tokenList[tokenIdx] = LTEqual;
                     tokenIdx++;
                 } else {
                     // reset state and push to tokenList the token LessThan
                     // do push back
+                    fputs("LessThan\t<\n", file_ptr_w);
                     state = A;
                     tokenList[tokenIdx] = LessThan;
                     tokenIdx++;
@@ -155,11 +160,19 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     (c >= '0' && c <= '9') ||
                     c == '_') {
                     state = I;
+                    buffer[buffer_idx++] = c;
                 }
                 else {
                     state = A;
-                    tokenList[tokenIdx] = Identifier;
-                    tokenIdx++;
+                    // text put
+                    buffer[buffer_idx] = '\0';
+                    fprintf(file_ptr_w, "Identifier\t%s\n", buffer);
+                    buffer_idx = 0;
+                    
+                    // parse token
+                    tokenList[tokenIdx++] = Identifier;
+
+                    // pushback
                     ungetc(c, file_ptr_r);
                 }
                 break;
