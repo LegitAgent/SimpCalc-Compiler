@@ -242,11 +242,6 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 break;
             case DIV:
                 if (c == '/') {
-                    buffer[buffer_idx++] = c;
-                    buffer[buffer_idx] = '\0';
-
-                    fprintf(file_ptr_w, "Comment\t%s\n", buffer);
-                    buffer_idx = 0;
                     // set state to COM
                     state = COM;
                 }

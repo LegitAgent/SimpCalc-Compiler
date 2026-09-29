@@ -11,7 +11,7 @@ void parser(FILE* file_ptr_r, FILE* file_ptr_w) {
 
     // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
     // iterate over file character by character
-    while ((c = fgetc(file_ptr_r)) != EOF) {
+    // while ((c = fgetc(file_ptr_r)) != EOF) {
         
-    }
+    // }
 }
