@@ -24,6 +24,7 @@ enum TokenType {
     GTEqual,
     NotEqual,
     ERROR,
+    EndofFile,
     // Unique Identifier Tokens
     PRINT,
     IF,
@@ -33,7 +34,6 @@ enum TokenType {
     AND,
     OR,
     NOT,
-    EndofFile
 };
 
 void scanner(FILE* read, FILE* write);

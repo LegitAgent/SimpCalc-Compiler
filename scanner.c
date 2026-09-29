@@ -229,7 +229,34 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = I;
                     appendCharacter(c);
                 } else {
-                    finishScanLine(file_ptr_w, Identifier, "Identifier");
+                    enum TokenType type = Identifier;
+                    char *scanType = "Identifier";
+                    if (strcmp(buffer, "PRINT") == 0) {
+                        type = PRINT;
+                        scanType = "Print";
+                    } else if (strcmp(buffer, "IF") == 0) {
+                        type = IF;
+                        scanType = "If";
+                    } else if (strcmp(buffer, "ELSE") == 0) {
+                        type = ELSE;
+                        scanType = "Else";
+                    } else if (strcmp(buffer, "ENDIF") == 0) {
+                        type = ENDIF;
+                        scanType = "Endif";
+                    } else if (strcmp(buffer, "SQRT") == 0) {
+                        type = SQRT;
+                        scanType = "Sqrt";
+                    } else if (strcmp(buffer, "AND") == 0) {
+                        type = AND;
+                        scanType = "And";
+                    } else if (strcmp(buffer, "OR") == 0) {
+                        type = OR;
+                        scanType = "Or";
+                    } else if (strcmp(buffer, "NOT") == 0) {
+                        type = NOT;
+                        scanType = "Not";
+                    }
+                    finishScanLine(file_ptr_w, type, scanType);
 
                     ungetc(c, file_ptr_r);
                 }
