@@ -52,18 +52,81 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c == '*') state = MULT;
                 break;
             case D:
+                if (c >= '0' && c <= '9')
+                    state = D;
+                else if (c == '.')
+                    state = DOT;
+                else if (c == 'e' || c == 'E')
+                    state = E;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = Number;
+                    tokenIdx++;
+                }
                 break;
             case DOT:
+                if (c >= '0' && c <= '9')
+                    state = F;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = ERROR;
+                    tokenIdx++;
+                }
                 break;
             case F:
+                if (c >= '0' && c <= '9')
+                    state = F;
+                else if (c == 'e' || c == 'E')
+                    state = E;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = Number;
+                    tokenIdx++;
+                }
                 break;
             case E:
+                if (c == '+' || c == '-')
+                    state = SIGN;
+                else if (c >= '0' && c <= '9')
+                    state = EXP;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = ERROR;
+                    tokenIdx++;
+                }
                 break;
             case EXP:
+                if (c >= '0' && c <= '9')
+                    state = EXP;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = Number;
+                    tokenIdx++;
+                }
                 break;
             case SIGN:
+                if (c == '+' || c == '-')
+                    state = SIGN;
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = ERROR;
+                    tokenIdx++;
+                }
                 break;
             case STR:
+                if (c == '"') {
+                    state = A;
+                    tokenList[tokenIdx] = String;
+                    tokenIdx++;
+                }
+                else if (c == '\n') {
+                    state = A;
+                    tokenList[tokenIdx] = ERROR;
+                    tokenIdx++;
+                }
+                else {
+                    state = STR;
+                }
                 break;
             case LT:
                 // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
@@ -82,6 +145,17 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 }
                 break;
             case I:
+                if ((c >= 'a' && c <= 'z') ||
+                    (c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') ||
+                    c == '_') {
+                    state = I;
+                }
+                else {
+                    state = A;
+                    tokenList[tokenIdx] = Identifier;
+                    tokenIdx++;
+                }
                 break;
             case COM:
                 if (c == '\n')
