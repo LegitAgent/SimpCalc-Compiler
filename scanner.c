@@ -18,38 +18,38 @@ enum State {
     COL,
     NEQ,
     MULT,
+    ERRORs,
+    EOFs
 };
 
 enum Token tokenList[1000];
-int tokenPtr = 0;
+int tokenIdx = 0;
 // when a thing is scanned, put into tokenList the enum Token.
 // i.e. "Chudhalla" gets scanned and recognized as a valid Identifier, we put the Identifier enum into tokenList
 
 void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     enum State state = A;
     int c; // cur char
-    // character buffer for digits (string)
-    char buffer[256]; // so max digit len would be 255, + 1 for null terminator
+    // character buffer for stmt (string)
+    char buffer[256]; // so max stmt len would be 255, + 1 for null terminator
     int buffer_idx = 0;
 
     // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
     // iterate over file character by character
     while ((c = fgetc(file_ptr_r)) != EOF) {
-        switch(state)
-        {
+        if (state == ERRORs) {
+            printf("Error.");
+            break;
+        }
+
+        switch(state) {
             case A:
-                if (c == '<')
-                    state = LT;
-                else if (c == '>')
-                    state = GT;
-                else if (c == '/')
-                    state = DIV;
-                else if (c == ':')
-                    state = COL;
-                else if (c == '!')
-                    state = NEQ;
-                else if (c == '*')
-                    state = MULT;
+                if (c == '<') state = LT;
+                else if (c == '>') state = GT;
+                else if (c == '/') state = DIV;
+                else if (c == ':') state = COL;
+                else if (c == '!') state = NEQ;
+                else if (c == '*') state = MULT;
                 break;
             case D:
                 break;
@@ -66,19 +66,19 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
             case STR:
                 break;
             case LT:
+                // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
                     // reset state and push to tokenList the token LTEqual
                     state = A;
-                    tokenList[tokenPtr] = LTEqual;
-                    tokenPtr++;
-                }
-                else{
+                    tokenList[tokenIdx] = LTEqual;
+                    tokenIdx++;
+                } else {
                     // reset state and push to tokenList the token LessThan
                     // do push back
                     state = A;
-                    tokenList[tokenPtr] = LessThan;
-                    tokenPtr++;
-                    //[TODO: PUSHBACK IDK HOW YOU IMPLEMENTED THIS THING ALBA]
+                    tokenList[tokenIdx] = LessThan;
+                    tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case I:
@@ -95,73 +95,74 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     // reset state and push to tokenList the token Divide
                     // do push back
                     state = A;
-                    tokenList[tokenPtr] = Divide;
-                    tokenPtr++;
-                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                    tokenList[tokenIdx] = Divide;
+                    tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case GT:
                 if (c == '=') {
                     // reset state and push to tokenList the token GTEqual
                     state = A;
-                    tokenList[tokenPtr] = GTEqual;
-                    tokenPtr++;
+                    tokenList[tokenIdx] = GTEqual;
+                    tokenIdx++;
                 }
                 else {
                     // reset state and push to tokenList the token GreaterThan
                     // do push back
                     state = A;
-                    tokenList[tokenPtr] = GreaterThan;
-                    tokenPtr++;
-                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                    tokenList[tokenIdx] = GreaterThan;
+                    tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case COL:
                 if (c == '=') {
                     // reset state and push to tokenList the token Assign
                     state = A;
-                    tokenList[tokenPtr] = Assign;
-                    tokenPtr++;
+                    tokenList[tokenIdx] = Assign;
+                    tokenIdx++;
                 }
                 else {
                     // reset state and push to tokenList the token Colon
                     // do push back
                     state = A;
-                    tokenList[tokenPtr] = Colon;
-                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                    tokenList[tokenIdx] = Colon;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case NEQ:
                 if (c == '=') {
                     // reset state and push to tokenList the token NotEqual
                     state = A;
-                    tokenList[tokenPtr] = NotEqual;
-                    tokenPtr++;
+                    tokenList[tokenIdx] = NotEqual;
+                    tokenIdx++;
                 }
                 else {
                     // set to error state push to tokenList the token ERROR
-                    state = ERROR;
-                    tokenList[tokenPtr] = ERROR;
-                    tokenPtr++;
+                    state = ERRORs;
+                    tokenList[tokenIdx] = ERROR;
+                    tokenIdx++;
                 }
                 break;
             case MULT:
                 if (c == '*') {
                     // reset state and push to tokenList the token Raise
                     state = A;
-                    tokenList[tokenPtr] = Raise;
-                    tokenPtr++;
+                    tokenList[tokenIdx] = Raise;
+                    tokenIdx++;
                 }
                 else {
                     // reset state and push to tokenList the token Multiply
                     // do pushback
                     state = A;
-                    tokenList[tokenPtr] = Multiply;
-                    tokenPtr++;
-                    //[TODO: PUSHBACK idk how you implemented this thing alba]
+                    tokenList[tokenIdx] = Multiply;
+                    tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             default: // ERROR STATE
+                state = ERRORs;
                 break;
         }
     }
@@ -171,7 +172,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
 
 enum Token gettoken() //only call this after finished scanning
 {
-    enum Token out = tokenList[tokenPtr]; //out is set to tokenList at tokenptr
-    tokenPtr++; // increment token ptr
+    enum Token out = tokenList[tokenIdx]; // out is set to tokenList at tokenptr
+    tokenIdx++; // increment token ptr
     return out;
 }
