@@ -1,7 +1,8 @@
+#include "scanner.h"
+#include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
-#include "scanner.h"
 
 enum State {
     A,
@@ -19,367 +20,320 @@ enum State {
     GT,
     COL,
     NEQ,
-    MULT,
-    ERRORs,
-    EOFs
+    MULT
 };
 
-Token tokenList[10000];
-int tokenIdx = 0;
-static int tokenReadIdx = 0; // for tracking which token to read
+static char buffer[4096];
+static int bufferIdx;
+static enum State state = A;
 
-// character buffer for stmt (string)
-char buffer[4096]; // so max stmt len would be 4095, + 1 for null terminator
-int bufferIdx = 0;
-enum State state = A; // DEFAULT STATE
-
-void setDefaultStates() {
+static void setDefaultStates(void) {
     bufferIdx = 0;
     state = A;
 }
 
-// adds a specific token to the token list, with a token type and token contents
-void addToken(enum TokenType type, const char *lexeme) {
-    const int tokenCapacity = (int)(sizeof(tokenList) / sizeof(tokenList[0]));
-    if (state == ERRORs) return;
-
-    // keep one slot available to report overflow without writing out of bounds
-    if (tokenIdx >= tokenCapacity - 1) {
+static Token makeToken(enum TokenType type, const char *lexeme) {
+    Token token;
+    if (strlen(lexeme) >= sizeof(token.lexeme)) {
         type = ERROR;
-        lexeme = "Exceeded token limit.";
-    } else if (strlen(lexeme) >= sizeof(tokenList[0].lexeme)) {
-        type = ERROR;
-        lexeme = "Exceeded lexeme length (255 characters).";
+        lexeme = "Exceeded lexeme length (4095 characters).";
     }
-
-    tokenList[tokenIdx].type = type;
-    strcpy(tokenList[tokenIdx].lexeme, lexeme);
-    tokenIdx++;
-
+    token.type = type;
+    strcpy(token.lexeme, lexeme);
     setDefaultStates();
-    if (type == ERROR) state = ERRORs;
+    return token;
 }
 
-static void appendCharacter(int c) {
+static bool appendCharacter(int c, Token *outToken) {
     if (bufferIdx >= (int)sizeof(buffer) - 1) {
-        addToken(ERROR, "Exceeded statement length.");
-        return;
+        *outToken = makeToken(ERROR, "Exceeded statement length.");
+        return false;
     }
     buffer[bufferIdx++] = (char)c;
+    return true;
 }
 
-void finishScanLine(FILE* file_ptr_w, enum TokenType type, const char *scanType) {
+static Token writeOverflow(FILE *output, Token overflow) {
+    fprintf(output, "ERROR\t%s\n", overflow.lexeme);
+    return overflow;
+}
+
+static Token writeToken(FILE *output, enum TokenType type, const char *name, const char *lexeme) {
+    Token token = makeToken(type, lexeme);
+    if (token.type == ERROR) {
+        fprintf(output, "ERROR\t%s\n", token.lexeme);
+    } else if (token.type == EndofFile) {
+        fputs("EndofFile\n", output);
+    } else {
+        fprintf(output, "%s\t%s\n", name, token.lexeme);
+    }
+    return token;
+}
+
+static Token writeScanLine(FILE *output, enum TokenType type, const char *name) {
     buffer[bufferIdx] = '\0';
-    addToken(type, buffer);
-    if (state != ERRORs) fprintf(file_ptr_w, "%s\t%s\n", scanType, buffer);
+    return writeToken(output, type, name, buffer);
 }
 
-void checkKeyword(enum TokenType* type, char** scanType) {
+static void checkKeyword(enum TokenType *type, const char **name) {
     buffer[bufferIdx] = '\0';
     if (strcmp(buffer, "PRINT") == 0) {
         *type = PRINT;
-        *scanType = "Print";
+        *name = "Print";
     } else if (strcmp(buffer, "IF") == 0) {
         *type = IF;
-        *scanType = "If";
+        *name = "If";
     } else if (strcmp(buffer, "ELSE") == 0) {
         *type = ELSE;
-        *scanType = "Else";
+        *name = "Else";
     } else if (strcmp(buffer, "ENDIF") == 0) {
         *type = ENDIF;
-        *scanType = "Endif";
+        *name = "Endif";
     } else if (strcmp(buffer, "SQRT") == 0) {
         *type = SQRT;
-        *scanType = "Sqrt";
+        *name = "Sqrt";
     } else if (strcmp(buffer, "AND") == 0) {
         *type = AND;
-        *scanType = "And";
+        *name = "And";
     } else if (strcmp(buffer, "OR") == 0) {
         *type = OR;
-        *scanType = "Or";
+        *name = "Or";
     } else if (strcmp(buffer, "NOT") == 0) {
         *type = NOT;
-        *scanType = "Not";
+        *name = "Not";
     }
 }
 
-void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
+static Token writeIdentifier(FILE *output) {
+    enum TokenType type = Identifier;
+    const char *name = "Identifier";
+    checkKeyword(&type, &name);
+    return writeScanLine(output, type, name);
+}
 
-    int c; // cur char
-    tokenIdx = 0;
-    tokenReadIdx = 0;
-    setDefaultStates();
-    // https://stackoverflow.com/questions/4823177/reading-a-file-character-by-character-in-c
-    // iterate over file character by character
-
-    while (state != ERRORs && (c = fgetc(file_ptr_r)) != EOF) {
-        switch(state) {
+Token gettoken(FILE *input, FILE *output) {
+    int c;
+    Token overflow;
+    while ((c = fgetc(input)) != EOF) {
+        switch (state) {
             case A:
-                if (c == '<') state = LT;
-                else if (c == '>') state = GT;
-                else if (c == '/') state = DIV;
-                else if (c == ':') state = COL;
-                else if (c == '!') state = NEQ;
-                else if (c == '*') state = MULT;
-                else if (c == '(') {
-                    addToken(LeftParen, "(");
-                    if (state != ERRORs) fputs("LeftParen\t(\n", file_ptr_w);
+                if (c == '<') {
+                    state = LT;
+                } else if (c == '>') {
+                    state = GT;
+                } else if (c == '/') {
+                    state = DIV;
+                } else if (c == ':') {
+                    state = COL;
+                } else if (c == '!') {
+                    state = NEQ;
+                } else if (c == '*') {
+                    state = MULT;
+                } else if (c == '(') {
+                    return writeToken(output, LeftParen, "LeftParen", "(");
                 } else if (c == ')') {
-                    addToken(RightParen, ")");
-                    if (state != ERRORs) fputs("RightParen\t)\n", file_ptr_w);
+                    return writeToken(output, RightParen, "RightParen", ")");
                 } else if (c == '-') {
-                    addToken(Minus, "-");
-                    if (state != ERRORs) fputs("Minus\t-\n", file_ptr_w);
+                    return writeToken(output, Minus, "Minus", "-");
                 } else if (c == '+') {
-                    addToken(Plus, "+");
-                    if (state != ERRORs) fputs("Plus\t+\n", file_ptr_w);
+                    return writeToken(output, Plus, "Plus", "+");
                 } else if (c == ';') {
-                    addToken(Semicolon, ";");
-                    if (state != ERRORs) fputs("Semicolon\t;\n", file_ptr_w);
+                    return writeToken(output, Semicolon, "Semicolon", ";");
                 } else if (c == ',') {
-                    addToken(Comma, ",");
-                    if (state != ERRORs) fputs("Comma\t,\n", file_ptr_w);
+                    return writeToken(output, Comma, "Comma", ",");
                 } else if (c == '"') {
                     state = STR;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if (c >= '0' && c <= '9') {
                     state = D;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
                     state = I;
-                    appendCharacter(c);
-                } else if (isspace(c)) {
-                    // https://www.geeksforgeeks.org/c/isspace-in-c/
-                    // whitespace separates tokens, stuff like tabs, new lines as well
-                } else {
-                    addToken(ERROR, "Invalid character.");
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
+                } else if (!isspace(c)) {
+                    return writeToken(output, ERROR, "ERROR", "Invalid character.");
                 }
                 break;
             case D:
                 if (c >= '0' && c <= '9') {
-                    state = D;
-
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if (c == '.') {
                     state = DOT;
-
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if (c == 'e' || c == 'E') {
                     state = E;
-
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    finishScanLine(file_ptr_w, Number, "Number");
-
-                    ungetc(c, file_ptr_r);
+                    ungetc(c, input);
+                    return writeScanLine(output, Number, "Number");
                 }
                 break;
             case DOT:
                 if (c >= '0' && c <= '9') {
                     state = F;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    addToken(ERROR, "Should be followed by digits.");
+                    return writeToken(output, ERROR, "ERROR", "Should be followed by digits.");
                 }
                 break;
             case F:
                 if (c >= '0' && c <= '9') {
-                    state = F;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if (c == 'e' || c == 'E') {
                     state = E;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    finishScanLine(file_ptr_w, Number, "Number");
-
-                    ungetc(c, file_ptr_r);
+                    ungetc(c, input);
+                    return writeScanLine(output, Number, "Number");
                 }
                 break;
             case E:
                 if (c == '+' || c == '-') {
                     state = SIGN;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else if (c >= '0' && c <= '9') {
                     state = EXP;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    addToken(ERROR, "Should followed by a + or -, or digits.");
+                    return writeToken(output, ERROR, "ERROR",
+                                      "Should be followed by a sign or digit.");
                 }
                 break;
             case EXP:
                 if (c >= '0' && c <= '9') {
-                    state = EXP;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    finishScanLine(file_ptr_w, Number, "Number");
-
-                    ungetc(c, file_ptr_r);
+                    ungetc(c, input);
+                    return writeScanLine(output, Number, "Number");
                 }
                 break;
             case SIGN:
                 if (c >= '0' && c <= '9') {
                     state = EXP;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    addToken(ERROR, "Should be followed by digits.");
+                    return writeToken(output, ERROR, "ERROR", "Should be followed by digits.");
                 }
                 break;
             case STR:
                 if (c == '"') {
-                    appendCharacter(c);
-                    if (state == ERRORs) break;
-                    finishScanLine(file_ptr_w, String, "String");
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
+                    return writeScanLine(output, String, "String");
                 } else if (c == '\n') {
-                    addToken(ERROR, "Should end with a quoatation mark.");
-                } else {
-                    state = STR;
-                    appendCharacter(c);
+                    return writeToken(output, ERROR, "ERROR", "Should end with a quotation mark.");
+                } else if (!appendCharacter(c, &overflow)) {
+                    return writeOverflow(output, overflow);
                 }
                 break;
             case LT:
-                // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
-                    // reset state and push to tokenList the token LTEqual
-                    addToken(LTEqual, "<=");
-                    if (state != ERRORs) fputs("LTEqual\t<=\n", file_ptr_w);
-                } else {
-                    // reset state and push to tokenList the token LessThan
-                    // do push back
-                    addToken(LessThan, "<");
-                    if (state != ERRORs) fputs("LessThan\t<\n", file_ptr_w);
-                    ungetc(c, file_ptr_r);
+                    return writeToken(output, LTEqual, "LTEqual", "<=");
                 }
-                break;
+                ungetc(c, input);
+                return writeToken(output, LessThan, "LessThan", "<");
             case I:
-                if ((c >= 'a' && c <= 'z') ||
-                    (c >= 'A' && c <= 'Z') ||
-                    (c >= '0' && c <= '9') ||
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
                     c == '_') {
-                    state = I;
-                    appendCharacter(c);
+                    if (!appendCharacter(c, &overflow)) {
+                        return writeOverflow(output, overflow);
+                    }
                 } else {
-                    enum TokenType type = Identifier;
-                    char *scanType = "Identifier";
-                    checkKeyword(&type, &scanType);
-                    finishScanLine(file_ptr_w, type, scanType);
-
-                    ungetc(c, file_ptr_r);
+                    ungetc(c, input);
+                    return writeIdentifier(output);
                 }
                 break;
             case COM:
-                if (c == '\n')
-                    state = A; // reset state if newline
+                if (c == '\n') {
+                    state = A;
+                }
                 break;
             case DIV:
                 if (c == '/') {
-                    // set state to COM
                     state = COM;
                 } else {
-                    addToken(Divide, "/");
-                    if (state != ERRORs) fputs("Divide\t/\n", file_ptr_w);
-                    ungetc(c, file_ptr_r);
+                    ungetc(c, input);
+                    return writeToken(output, Divide, "Divide", "/");
                 }
                 break;
             case GT:
                 if (c == '=') {
-                    // reset state and push to tokenList the token GTEqual
-                    addToken(GTEqual, ">=");
-                    if (state != ERRORs) fputs("GTEqual\t>=\n", file_ptr_w);
-                } else {
-                    addToken(GreaterThan, ">");
-                    if (state != ERRORs) fputs("GreaterThan\t>\n", file_ptr_w);
-                    ungetc(c, file_ptr_r);
+                    return writeToken(output, GTEqual, "GTEqual", ">=");
                 }
-                break;
+                ungetc(c, input);
+                return writeToken(output, GreaterThan, "GreaterThan", ">");
             case COL:
                 if (c == '=') {
-                    addToken(Assign, ":=");
-                    if (state != ERRORs) fputs("Assign\t:=\n", file_ptr_w);
-                } else {
-                    addToken(Colon, ":");
-                    if (state != ERRORs) fputs("Colon\t:\n", file_ptr_w);
-                    ungetc(c, file_ptr_r);
+                    return writeToken(output, Assign, "Assign", ":=");
                 }
-                break;
+                ungetc(c, input);
+                return writeToken(output, Colon, "Colon", ":");
             case NEQ:
                 if (c == '=') {
-                    addToken(NotEqual, "!=");
-                    if (state != ERRORs) fputs("NotEqual\t!=\n", file_ptr_w);
-                } else {
-                    addToken(ERROR, "Should be followed by an =.");
+                    return writeToken(output, NotEqual, "NotEqual", "!=");
                 }
-                break;
+                return writeToken(output, ERROR, "ERROR", "Should be followed by an =.");
             case MULT:
                 if (c == '*') {
-                    addToken(Raise, "**");
-                    if (state != ERRORs) fputs("Raise\t**\n", file_ptr_w);
-                } else {
-                    addToken(Multiply, "*");
-                    if (state != ERRORs) fputs("Multiply\t*\n", file_ptr_w);
-                    ungetc(c, file_ptr_r);
+                    return writeToken(output, Raise, "Raise", "**");
                 }
-                break;
-            default: // ERROR STATE
-                addToken(ERROR, "Unknown case, error.");
-                break;
+                ungetc(c, input);
+                return writeToken(output, Multiply, "Multiply", "*");
         }
     }
-
-    // finish tokens that have no trailing delimiter, i.e. EOF while incomplete
     switch (state) {
         case D:
         case F:
         case EXP:
-            finishScanLine(file_ptr_w, Number, "Number");
-            break;
-        case I: ;
-            enum TokenType type = Identifier;
-            char *scanType = "Identifier";
-            checkKeyword(&type, &scanType);
-            finishScanLine(file_ptr_w, type, scanType);
-            break;
+            return writeScanLine(output, Number, "Number");
+        case I:
+            return writeIdentifier(output);
         case LT:
-            addToken(LessThan, "<");
-            if (state != ERRORs) fputs("LessThan\t<\n", file_ptr_w);
-            break;
+            return writeToken(output, LessThan, "LessThan", "<");
         case GT:
-            addToken(GreaterThan, ">");
-            if (state != ERRORs) fputs("GreaterThan\t>\n", file_ptr_w);
-            break;
+            return writeToken(output, GreaterThan, "GreaterThan", ">");
         case DIV:
-            addToken(Divide, "/");
-            if (state != ERRORs) fputs("Divide\t/\n", file_ptr_w);
-            break;
+            return writeToken(output, Divide, "Divide", "/");
         case COL:
-            addToken(Colon, ":");
-            if (state != ERRORs) fputs("Colon\t:\n", file_ptr_w);
-            break;
+            return writeToken(output, Colon, "Colon", ":");
         case MULT:
-            addToken(Multiply, "*");
-            if (state != ERRORs) fputs("Multiply\t*\n", file_ptr_w);
-            break;
+            return writeToken(output, Multiply, "Multiply", "*");
         case DOT:
         case E:
         case SIGN:
         case STR:
         case NEQ:
-            addToken(ERROR, "Incomplete token at end of file.");
-            break;
-        default:
-            break;
+            return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
+        case A:
+        case COM:
+            return writeToken(output, EndofFile, "EndofFile", "");
     }
-    if (state == ERRORs) {
-        fprintf(file_ptr_w, "ERROR\t%s\n", tokenList[tokenIdx - 1].lexeme);
-    }
-    fputs("EndofFile\n", file_ptr_w);
-}
-
-// gets a token using a static token reading variable
-Token getToken() {
-    if (tokenReadIdx >= tokenIdx) {
-        Token eof = {EndofFile, "End of File."};
-        return eof;
-    }
-
-    return tokenList[tokenReadIdx++];
+    return writeToken(output, ERROR, "ERROR", "Unknown scanner state.");
 }

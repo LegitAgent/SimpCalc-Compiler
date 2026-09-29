@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
-#include "scanner.h"
 #include "parser.h"
 
 int main() {
@@ -57,16 +56,6 @@ int main() {
             fclose(file_ptr_r_main);
             return 1;
         }
-        // get the tokens, parse them to a txt file
-        scanner(file_ptr_r_main, file_ptr_w_scanner);
-        fclose(file_ptr_w_scanner);
-        fclose(file_ptr_r_main);
-        
-        FILE* file_ptr_r_scanner = fopen(output_name_scanner,"r");
-        if (file_ptr_r_scanner == NULL) {
-            printf("Unknown file name, could not locate file.\n");
-            return 1;
-        }
 
         char output_name_parser[256]; // name max = 256 characters
 
@@ -82,14 +71,13 @@ int main() {
         FILE* file_ptr_w_parser = fopen(output_name_parser,"w");
         if (file_ptr_w_parser == NULL) {
             printf("Could not create file.\n");
-            fclose(file_ptr_r_scanner);
             return 1;
         }
 
-        parser(file_ptr_r_scanner, file_ptr_w_parser);
-
+        parser(file_ptr_r_main, file_ptr_w_scanner, file_ptr_w_parser);
         // close for no memory leak
-        fclose(file_ptr_r_scanner);
+        fclose(file_ptr_w_scanner);
+        fclose(file_ptr_r_main);
         fclose(file_ptr_w_parser);
     }
     closedir(dir_ptr);

@@ -3,6 +3,6 @@
 
 #include <stdio.h>
 
-void parser(FILE* read_scanner_file, FILE* write);
+void parser(FILE* scanner_read, FILE* scanner_write, FILE* parser_write);
 
 #endif

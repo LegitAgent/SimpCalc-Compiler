@@ -42,7 +42,6 @@ typedef struct {
     char lexeme[4096]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
 } Token;
 
-void scanner(FILE* read, FILE* write);
-Token getToken(void);
+Token gettoken(FILE* read, FILE* write);
 
 #endif
