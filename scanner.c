@@ -75,7 +75,6 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
-                    ungetc(c, file_ptr_r);
                 }
                 break;
             case F:
@@ -99,7 +98,6 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
-                    ungetc(c, file_ptr_r);
                 }
                 break;
             case EXP:
@@ -119,7 +117,6 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
-                    ungetc(c, file_ptr_r);
                 }
                 break;
             case STR:
