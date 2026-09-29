@@ -371,7 +371,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
     if (state == ERRORs) {
         fprintf(file_ptr_w, "ERROR\t%s\n", tokenList[tokenIdx - 1].lexeme);
     }
-    fputs("EndOfFile\n", file_ptr_w);
+    fputs("EndofFile\n", file_ptr_w);
 }
 
 // gets a token using a static token reading variable

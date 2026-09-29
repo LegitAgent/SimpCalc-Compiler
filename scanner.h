@@ -2,6 +2,7 @@
 #define SCANNER_H
 
 #include <stdio.h>
+
 enum TokenType {
     Identifier,
     Number,
@@ -36,13 +37,12 @@ enum TokenType {
     NOT,
 };
 
-void scanner(FILE* read, FILE* write);
-
 typedef struct {
     enum TokenType type;
-    char lexeme[256]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
+    char lexeme[4096]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
 } Token;
 
+void scanner(FILE* read, FILE* write);
 Token getToken(void);
 
 #endif
