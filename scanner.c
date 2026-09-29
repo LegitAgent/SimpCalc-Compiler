@@ -72,9 +72,9 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 if (c >= '0' && c <= '9')
                     state = F;
                 else {
-                    state = A;
+                    state = ERRORs;
                     tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;
+                    tokenIdx++;;
                 }
                 break;
             case F:
@@ -95,7 +95,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c >= '0' && c <= '9')
                     state = EXP;
                 else {
-                    state = A;
+                    state = ERRORs;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
                 }
@@ -114,7 +114,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 if (c >= '0' && c <= '9') 
                     state = EXP;
                 else {
-                    state = A;
+                    state = ERRORs;
                     tokenList[tokenIdx] = ERROR;
                     tokenIdx++;
                 }
@@ -126,9 +126,8 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     tokenIdx++;
                 }
                 else if (c == '\n') {
-                    state = A;
+                    state = ERRORs;
                     tokenList[tokenIdx] = ERROR;
-                    tokenIdx++;
                 }
                 else {
                     state = STR;
@@ -161,6 +160,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
                     tokenList[tokenIdx] = Identifier;
                     tokenIdx++;
+                    ungetc(c, file_ptr_r);
                 }
                 break;
             case COM:
