@@ -50,6 +50,36 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                 else if (c == ':') state = COL;
                 else if (c == '!') state = NEQ;
                 else if (c == '*') state = MULT;
+                else if (c == '(') {
+                    fputs("LeftParen\t(\n", file_ptr_w);
+
+                    tokenList[tokenIdx++] = LeftParen;
+                }
+                else if (c == ')') {
+                    fputs("RightParen\t)\n", file_ptr_w);
+
+                    tokenList[tokenIdx++] = RightParen;
+                }
+                else if (c == '-') {
+                    fputs("Minus\t-\n", file_ptr_w);
+
+                    tokenList[tokenIdx++] = Minus;
+                }
+                else if (c == '+') {
+                    fputs("Plus\t+\n", file_ptr_w);
+
+                    tokenList[tokenIdx++] = Plus;
+                }
+                else if (c == ';') {
+                    fputs("Semicolon\t;\n", file_ptr_w);
+
+                    tokenList[tokenIdx++] = Semicolon;
+                }
+                else if (c == ',') {
+                    fputs("Comma\t,\n", file_ptr_w);
+                    
+                    tokenList[tokenIdx++] = Comma;
+                }
                 else if (c == '"') {
                     state = STR;
                     buffer[buffer_idx++] = c;
@@ -359,7 +389,7 @@ void scanner(FILE* file_ptr_r, FILE* file_ptr_w) {
                     state = A;
 
                     tokenList[tokenIdx++] = Multiply;
-                    
+
                     ungetc(c, file_ptr_r);
                 }
                 break;
