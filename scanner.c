@@ -4,6 +4,7 @@
 #include <string.h>
 #include "scanner.h"
 
+// DFA states
 enum State {
     A,
     D,
@@ -29,16 +30,19 @@ static int bufferIdx;
 static enum State state = A; // DEFAULT STATE
 static int lineCount = 1;
 
+// sets statement buffer and state to default values
 static void setDefaultStates(void) {
     bufferIdx = 0; 
     state = A;
 }
 
+// resets scanner vars
 void resetScanner(void) {
     setDefaultStates();
     lineCount = 1;
 }
 
+// gets tokentype and converts it to string
 const char *tokenTypetoString(enum TokenType type) {
     switch (type) {
         case Identifier:   return "Identifier";
@@ -78,6 +82,7 @@ const char *tokenTypetoString(enum TokenType type) {
     }
 }
 
+// makes a token according to the type and lexeme contents
 static Token makeToken(enum TokenType type, const char *lexeme) {
     Token token; 
 
@@ -105,6 +110,7 @@ static bool appendCharacter(int c, Token *outToken) {
     return true;
 }
 
+// writes the error overflow message, in case stmt len goes over 4095
 static Token writeOverflow(FILE *output, Token overflow) {
     fprintf(output, "ERROR\t%s\n", overflow.lexeme);
     return overflow;
@@ -129,6 +135,7 @@ static Token writeScanLine(FILE *output, enum TokenType type, const char *name) 
     return writeToken(output, type, name, buffer);
 }
 
+// checks a specific key word in the reserved key word table
 static void checkKeyword(enum TokenType *type, const char **name) {
     buffer[bufferIdx] = '\0';
     if (strcmp(buffer, "PRINT") == 0) {
@@ -166,6 +173,7 @@ static Token writeIdentifier(FILE *output) {
     return writeScanLine(output, type, name);
 }
 
+// gets a specific token from the input file
 Token gettoken(FILE *input, FILE *output) {
     int c; // cur char
     Token overflow;
@@ -396,9 +404,11 @@ Token gettoken(FILE *input, FILE *output) {
     // finish tokens that have no trailing delimiter, i.e. EOF while incomplete
     switch (state) {
         case D:
+            return writeToken(output, Number, "Number", buffer);
         case F:
+            return writeToken(output, Number, "Number", buffer);
         case EXP:
-            return writeScanLine(output, Number, "Number");
+            return writeToken(output, Number, "Number", buffer);
         case I:
             return writeIdentifier(output);
         case LT:
@@ -412,9 +422,13 @@ Token gettoken(FILE *input, FILE *output) {
         case MULT:
             return writeToken(output, Multiply, "Multiply", "*");
         case DOT:
+            return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
         case E:
+            return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
         case SIGN:
+            return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
         case STR:
+            return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
         case NEQ:
             return writeToken(output, ERROR, "ERROR", "Incomplete token at end of file.");
         case A:

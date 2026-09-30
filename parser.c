@@ -43,6 +43,8 @@ static void match(enum TokenType expectedType) {
 }
 
 // non-terminal recursive subroutine functions
+
+// Checks if current token matches Prg grammar, raises an error if not
 static void parsePrg() {
     if (hasError) return;
     // Blk EOF
@@ -55,6 +57,7 @@ static void parsePrg() {
     hasError = true;
 }
 
+// Checks if current token matches Blk grammar, raises an error if not
 static void parseBlk() {
     if (hasError) return;
     // Stm Blk, for {Identifier, PRINT, IF}
@@ -108,6 +111,7 @@ static void parseStm() {
     }
 }
 
+// Checks if current token matches Argfollow grammar, raises an error if not
 static void parseArgfollow() {
     if (hasError) return;
     // , Arg Argfollow
@@ -118,6 +122,7 @@ static void parseArgfollow() {
     }
 }
 
+// Checks if current token matches Arg grammar, raises an error if not
 static void parseArg() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -155,6 +160,7 @@ static void parseIffollow() {
     }
 }
 
+// Checks if current token matches Exp grammar, raises an error if not
 static void parseExp() {
     if (hasError) return;
     // Trm Trmfollow
@@ -183,6 +189,7 @@ static void parseTrmfollow() {
     }
 }
 
+// Checks if current token matches Trm grammar, raises an error if not
 static void parseTrm() {
     if (hasError) return;
     // Fac Facfollow
@@ -190,6 +197,7 @@ static void parseTrm() {
     parseFacfollow();
 }
 
+// Checks if current token matches Facfollow grammar, raises an error if not
 static void parseFacfollow() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -210,6 +218,7 @@ static void parseFacfollow() {
     }
 }
 
+// Checks if current token matches Fac grammar, raises an error if not
 static void parseFac() {
     if (hasError) return;
     // Lit Litfollow
@@ -217,6 +226,7 @@ static void parseFac() {
     parseLitfollow();
 }
 
+// Checks if current token matches Litfollow grammar, raises an error if not
 static void parseLitfollow() {
     if (hasError) return;
     if (currentToken.type == Raise) {
@@ -227,6 +237,7 @@ static void parseLitfollow() {
     }
 }
 
+// Checks if current token matches Lit grammar, raises an error if not
 static void parseLit() {
     if (hasError) return;
     if (currentToken.type == Minus) {
@@ -238,6 +249,7 @@ static void parseLit() {
         parseVal();
     }
 }
+
 // Checks if current token matches Val grammar, raises an error if not
 static void parseVal() {
     if (hasError) return;
@@ -270,6 +282,7 @@ static void parseVal() {
     }
 }
 
+// Checks if current token matches Cnd grammar, raises an error if not
 static void parseCnd() {
     if (hasError) return;
     // Exp Rel Exp
@@ -319,7 +332,7 @@ bool parser(FILE* scan_read, FILE* scan_write, FILE* parse_write) {
     scanner_write = scan_write;
     parser_write = parse_write;
 
-    resetScanner();
+    resetScanner(); // so line and init vars get reset after every file
     hasError = false;
 
     advance();

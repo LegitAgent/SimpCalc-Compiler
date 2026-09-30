@@ -38,9 +38,9 @@ enum TokenType {
 };
 
 typedef struct {
-    enum TokenType type;
+    enum TokenType type; // token type
     char lexeme[4096]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
-    int line;
+    int line; // line where token is
 } Token;
 
 Token gettoken(FILE* read, FILE* write);
