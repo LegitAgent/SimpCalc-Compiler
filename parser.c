@@ -30,6 +30,7 @@ static void advance() {
     currentToken = gettoken(scanner_read, scanner_write);
 }
 
+// checks if current token matches the expected token, raises an error if not
 static void match(enum TokenType expectedType) {
     if (hasError) return;   
 
@@ -47,7 +48,7 @@ static void parsePrg() {
     // Blk EOF
     parseBlk();
     if (hasError) return;
-    if (currentToken.type == EndofFile) {
+    if (currentToken.type == EndofFile) { // EOF Check
         return;
     }
     fprintf(parser_write, "Parse Error on line %d: EndofFile expected.\n", currentToken.line);
@@ -63,6 +64,7 @@ static void parseBlk() {
     }
 }
 
+// Checks if current token matches Statement grammar, raises an error if not
 static void parseStm() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -130,6 +132,7 @@ static void parseArg() {
     }
 }
 
+// Checks if current token matches Iffollow grammar, raises an error if not
 static void parseIffollow() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -159,6 +162,7 @@ static void parseExp() {
     parseTrmfollow();
 }
 
+// Checks if current token matches Trmfollow grammar, raises an error if not
 static void parseTrmfollow() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -234,7 +238,7 @@ static void parseLit() {
         parseVal();
     }
 }
-
+// Checks if current token matches Val grammar, raises an error if not
 static void parseVal() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -274,6 +278,7 @@ static void parseCnd() {
     parseExp();
 }
 
+// Checks if current token matches Rel grammar, raises an error if not
 static void parseRel() {
     if (hasError) return;
     switch (currentToken.type) {
