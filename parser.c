@@ -310,11 +310,11 @@ static void parseRel() {
 
 // read ptr here should be the file of the output file for scanner
 bool parser(FILE* scan_read, FILE* scan_write, FILE* parse_write) {
-    // test, scan parse scan parse
     scanner_read = scan_read;
     scanner_write = scan_write;
     parser_write = parse_write;
 
+    resetScanner();
     hasError = false;
 
     advance();

@@ -1,8 +1,8 @@
-#include "scanner.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include "scanner.h"
 
 enum State {
     A,
@@ -32,6 +32,11 @@ static int lineCount = 1;
 static void setDefaultStates(void) {
     bufferIdx = 0; 
     state = A;
+}
+
+void resetScanner(void) {
+    setDefaultStates();
+    lineCount = 1;
 }
 
 const char *tokenTypetoString(enum TokenType type) {

@@ -44,6 +44,7 @@ typedef struct {
 } Token;
 
 Token gettoken(FILE* read, FILE* write);
+void resetScanner(void);
 const char *tokenTypetoString(enum TokenType type);
 
 #endif

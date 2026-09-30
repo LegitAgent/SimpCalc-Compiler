@@ -63,7 +63,7 @@ int main() {
         // write to output_name with format
         snprintf(output_name_parser,
             sizeof(output_name_parser),
-            "%.*soutput_parser%s",
+            "%.*soutput_parse%s",
             (int) before_input_len,
             entry->d_name,
             input_pos + strlen("input")
