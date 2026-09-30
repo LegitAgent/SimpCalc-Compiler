@@ -224,6 +224,7 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case D:
+                // continue reading digits, or transition to decimal/exponent form
                 if (c >= '0' && c <= '9') {
                     if (!appendCharacter(c, &overflow)) {
                         return writeOverflow(output, overflow);
@@ -244,6 +245,7 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case DOT:
+                // decimal point must be followed by at least one digit
                 if (c >= '0' && c <= '9') {
                     state = F;
                     if (!appendCharacter(c, &overflow)) {
@@ -269,6 +271,7 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case E:
+                // exponent must be followed by a sign or digit
                 if (c == '+' || c == '-') {
                     state = SIGN;
                     if (!appendCharacter(c, &overflow)) {
@@ -295,6 +298,7 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case SIGN:
+                // exponent sign must be followed by a digit
                 if (c >= '0' && c <= '9') {
                     state = EXP;
                     if (!appendCharacter(c, &overflow)) {
