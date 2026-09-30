@@ -37,7 +37,7 @@ static void match(enum TokenType expectedType) {
     if (currentToken.type == expectedType) {
         advance();
     } else {
-        fprintf(parser_write, "Parse Error on line %d: %s expected.\n", currentToken.line, tokenTypetoString(expectedType));
+        fprintf(parser_write, "Parse Error on line %d: %s Expected.\n", currentToken.line, tokenTypetoString(expectedType));
         hasError = true;
     }
 }

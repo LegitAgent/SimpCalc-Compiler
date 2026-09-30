@@ -404,11 +404,11 @@ Token gettoken(FILE *input, FILE *output) {
     // finish tokens that have no trailing delimiter, i.e. EOF while incomplete
     switch (state) {
         case D:
-            return writeToken(output, Number, "Number", buffer);
+            return writeScanLine(output, Number, "Number");
         case F:
-            return writeToken(output, Number, "Number", buffer);
+            return writeScanLine(output, Number, "Number");
         case EXP:
-            return writeToken(output, Number, "Number", buffer);
+            return writeScanLine(output, Number, "Number");
         case I:
             return writeIdentifier(output);
         case LT:

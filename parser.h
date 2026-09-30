@@ -2,6 +2,7 @@
 #define PARSER_H
 
 #include <stdio.h>
+#include <stdbool.h>
 
 bool parser(FILE* scanner_read, FILE* scanner_write, FILE* parser_write);
 
