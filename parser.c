@@ -57,7 +57,7 @@ static void parsePrg() {
     hasError = true;
 }
 
-// Checks if current token matches Blk grammar, raises an error if not
+// Checks if current token matches specific Blk grammar case, does not parse further if not
 static void parseBlk() {
     if (hasError) return;
     // Stm Blk, for {Identifier, PRINT, IF}
@@ -111,7 +111,7 @@ static void parseStm() {
     }
 }
 
-// Checks if current token matches Argfollow grammar, raises an error if not
+// Checks if current token matches specific Argfollow grammar case, does not parse further if not
 static void parseArgfollow() {
     if (hasError) return;
     // , Arg Argfollow
@@ -122,7 +122,7 @@ static void parseArgfollow() {
     }
 }
 
-// Checks if current token matches Arg grammar, raises an error if not
+// Match current Token to String token, if not, follow Exp production
 static void parseArg() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -160,7 +160,7 @@ static void parseIffollow() {
     }
 }
 
-// Checks if current token matches Exp grammar, raises an error if not
+// Always follows production to Trm and Trmfollow
 static void parseExp() {
     if (hasError) return;
     // Trm Trmfollow
@@ -168,7 +168,7 @@ static void parseExp() {
     parseTrmfollow();
 }
 
-// Checks if current token matches Trmfollow grammar, raises an error if not
+// Checks if current token matches specific Trmfollow grammar case, does not parse further if not
 static void parseTrmfollow() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -189,7 +189,7 @@ static void parseTrmfollow() {
     }
 }
 
-// Checks if current token matches Trm grammar, raises an error if not
+// Always follows production to Fac and Facfollow
 static void parseTrm() {
     if (hasError) return;
     // Fac Facfollow
@@ -197,7 +197,7 @@ static void parseTrm() {
     parseFacfollow();
 }
 
-// Checks if current token matches Facfollow grammar, raises an error if not
+// Checks if current token matches specific Facfollow grammar case, does not parse further if not
 static void parseFacfollow() {
     if (hasError) return;
     switch (currentToken.type) {
@@ -218,7 +218,7 @@ static void parseFacfollow() {
     }
 }
 
-// Checks if current token matches Fac grammar, raises an error if not
+// Always follows production to Lit and Litfollow
 static void parseFac() {
     if (hasError) return;
     // Lit Litfollow
@@ -226,7 +226,7 @@ static void parseFac() {
     parseLitfollow();
 }
 
-// Checks if current token matches Litfollow grammar, raises an error if not
+// Checks if current token matches specific Litfollow grammar case, does not parse further if not
 static void parseLitfollow() {
     if (hasError) return;
     if (currentToken.type == Raise) {
@@ -237,7 +237,7 @@ static void parseLitfollow() {
     }
 }
 
-// Checks if current token matches Lit grammar, raises an error if not
+// Match current Token to Minus, if not, follow regular Val production
 static void parseLit() {
     if (hasError) return;
     if (currentToken.type == Minus) {
@@ -282,7 +282,7 @@ static void parseVal() {
     }
 }
 
-// Checks if current token matches Cnd grammar, raises an error if not
+// Always follows production to Exp Rel Exp
 static void parseCnd() {
     if (hasError) return;
     // Exp Rel Exp
