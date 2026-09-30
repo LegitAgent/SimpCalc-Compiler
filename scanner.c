@@ -27,6 +27,7 @@ enum State {
 static char buffer[4096]; // so max stmt len would be 4095, + 1 for null terminator
 static int bufferIdx;
 static enum State state = A; // DEFAULT STATE
+static int lineCount = 1;
 
 static void setDefaultStates(void) {
     bufferIdx = 0; 
@@ -41,8 +42,10 @@ static Token makeToken(enum TokenType type, const char *lexeme) {
         type = ERROR; // if lexeme is too long, make it ERROR
         lexeme = "Exceeded lexeme length (4095 characters).";
     }
+
     token.type = type;
     strcpy(token.lexeme, lexeme); // copies the lexeme string to the lexeme token array
+    token.line = lineCount;
     setDefaultStates();
     return token;
 }
@@ -167,6 +170,7 @@ Token gettoken(FILE *input, FILE *output) {
                         return writeOverflow(output, overflow);
                     }
                 } else if (isspace(c)) {
+                    if (c == '\n') lineCount++;
                     // https://www.geeksforgeeks.org/c/isspace-in-c/
                     // whitespace separates tokens, stuff like tabs, new lines as well
                 } else {
@@ -289,6 +293,8 @@ Token gettoken(FILE *input, FILE *output) {
                 break;
             case COM:
                 if (c == '\n') {
+                    setDefaultStates();
+                    lineCount++;
                 }
                 break;
             case DIV:

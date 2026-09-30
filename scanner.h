@@ -40,8 +40,10 @@ enum TokenType {
 typedef struct {
     enum TokenType type;
     char lexeme[4096]; // multiple attribs per token, i.e. foo -> identifier, lexeme = foo
+    int line;
 } Token;
 
 Token gettoken(FILE* read, FILE* write);
+const char *tokenTypetoString(enum TokenType type);
 
 #endif
