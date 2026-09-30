@@ -261,13 +261,13 @@ Token gettoken(FILE *input, FILE *output) {
                 }
                 break;
             case LT:
-                // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
-                    // reset state and push to tokenList the token LTEqual
+                    // reset state and write to buffer the token LTEqual
                     return writeToken(output, LTEqual, "LTEqual", "<=");
                 }
-                // reset state and push to tokenList the token LessThan
+                
                 // do push back
+                // reset state and write to buffer token LessThan
                 ungetc(c, input);
                 return writeToken(output, LessThan, "LessThan", "<");
             case I:
@@ -291,32 +291,44 @@ Token gettoken(FILE *input, FILE *output) {
                     // set state to COM
                     state = COM;
                 } else {
+                    // do push back
+                    // reset state and write to output the token Divide
                     ungetc(c, input);
                     return writeToken(output, Divide, "Divide", "/");
                 }
                 break;
             case GT:
                 if (c == '=') {
-                    // reset state and push to tokenList the token GTEqual
+                    // reset state and write to output the token GTEqual
                     return writeToken(output, GTEqual, "GTEqual", ">=");
                 }
+                // do push back
+                // reset state and write to output the token GreaterThan
                 ungetc(c, input);
                 return writeToken(output, GreaterThan, "GreaterThan", ">");
             case COL:
                 if (c == '=') {
+                    // reset state and write to output the token Assign
                     return writeToken(output, Assign, "Assign", ":=");
                 }
+                // do push back
+                // reset state and write to output the token Colon
                 ungetc(c, input);
                 return writeToken(output, Colon, "Colon", ":");
             case NEQ:
                 if (c == '=') {
+                    // reset state and write to output the token NotEqual
                     return writeToken(output, NotEqual, "NotEqual", "!=");
                 }
+                // reset state and output error
                 return writeToken(output, ERROR, "ERROR", "Should be followed by an =.");
             case MULT:
                 if (c == '*') {
+                    // reset state and write to output the token Raise
                     return writeToken(output, Raise, "Raise", "**");
                 }
+                // do push back
+                // reset state and write to output the token Multiply
                 ungetc(c, input);
                 return writeToken(output, Multiply, "Multiply", "*");
         }
