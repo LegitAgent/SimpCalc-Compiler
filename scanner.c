@@ -29,24 +29,27 @@ static int bufferIdx;
 static enum State state = A; // DEFAULT STATE
 
 static void setDefaultStates(void) {
-    bufferIdx = 0;
+    bufferIdx = 0; 
     state = A;
 }
 
 static Token makeToken(enum TokenType type, const char *lexeme) {
-    Token token;
+    Token token; 
 
-    if (strlen(lexeme) >= sizeof(token.lexeme)) {
-        type = ERROR;
+    // checks first if the maximum lexeme length is exceeded
+    if (strlen(lexeme) >= sizeof(token.lexeme)) { 
+        type = ERROR; // if lexeme is too long, make it ERROR
         lexeme = "Exceeded lexeme length (4095 characters).";
     }
     token.type = type;
-    strcpy(token.lexeme, lexeme);
+    strcpy(token.lexeme, lexeme); // copies the lexeme string to the lexeme token array
     setDefaultStates();
     return token;
 }
 
+// appends a character while checking for buffer overflow
 static bool appendCharacter(int c, Token *outToken) {
+    // to make space for the character
     if (bufferIdx >= (int)sizeof(buffer) - 1) {
         *outToken = makeToken(ERROR, "Exceeded statement length.");
         return false;
@@ -60,6 +63,7 @@ static Token writeOverflow(FILE *output, Token overflow) {
     return overflow;
 }
 
+// creates a token and writes its formatted output
 static Token writeToken(FILE *output, enum TokenType type, const char *name, const char *lexeme) {
     Token token = makeToken(type, lexeme);
     if (token.type == ERROR) {
@@ -72,6 +76,7 @@ static Token writeToken(FILE *output, enum TokenType type, const char *name, con
     return token;
 }
 
+// null-terminates the buffer before creating a token from it
 static Token writeScanLine(FILE *output, enum TokenType type, const char *name) {
     buffer[bufferIdx] = '\0';
     return writeToken(output, type, name, buffer);
@@ -106,6 +111,7 @@ static void checkKeyword(enum TokenType *type, const char **name) {
     }
 }
 
+// checks whether the buffered identifier is a keyword
 static Token writeIdentifier(FILE *output) {
     enum TokenType type = Identifier;
     const char *name = "Identifier";
@@ -263,11 +269,8 @@ Token gettoken(FILE *input, FILE *output) {
             case LT:
                 // this fails in the case of <=h, should be not valid, but with this, it will still recognize LTE
                 if (c == '=') {
-                    // reset state and push to tokenList the token LTEqual
                     return writeToken(output, LTEqual, "LTEqual", "<=");
                 }
-                // reset state and push to tokenList the token LessThan
-                // do push back
                 ungetc(c, input);
                 return writeToken(output, LessThan, "LessThan", "<");
             case I:
@@ -283,12 +286,10 @@ Token gettoken(FILE *input, FILE *output) {
                 break;
             case COM:
                 if (c == '\n') {
-                    state = A; // reset state if newline
                 }
                 break;
             case DIV:
                 if (c == '/') {
-                    // set state to COM
                     state = COM;
                 } else {
                     ungetc(c, input);
@@ -297,7 +298,6 @@ Token gettoken(FILE *input, FILE *output) {
                 break;
             case GT:
                 if (c == '=') {
-                    // reset state and push to tokenList the token GTEqual
                     return writeToken(output, GTEqual, "GTEqual", ">=");
                 }
                 ungetc(c, input);
