@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -74,7 +75,9 @@ int main() {
             return 1;
         }
 
-        parser(file_ptr_r_main, file_ptr_w_scanner, file_ptr_w_parser);
+        bool success = parser(file_ptr_r_main, file_ptr_w_scanner, file_ptr_w_parser);
+        if (success) fprintf(file_ptr_w_parser, "%s is a valid SimpCalc program\n", entry->d_name);
+        
         // close for no memory leak
         fclose(file_ptr_w_scanner);
         fclose(file_ptr_r_main);

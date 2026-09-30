@@ -20,7 +20,7 @@ enum State {
     GT,
     COL,
     NEQ,
-    MULT
+    MULT,
 };
 
 // character buffer for stmt (string)
@@ -32,6 +32,45 @@ static int lineCount = 1;
 static void setDefaultStates(void) {
     bufferIdx = 0; 
     state = A;
+}
+
+const char *tokenTypetoString(enum TokenType type) {
+    switch (type) {
+        case Identifier:   return "Identifier";
+        case Number:       return "Number";
+        case String:       return "String";
+        case Assign:       return "Assign";
+        case Semicolon:    return "Semicolon";
+        case Colon:        return "Colon";
+        case Comma:        return "Comma";
+        case LeftParen:    return "LeftParen";
+        case RightParen:   return "RightParen";
+        case Plus:         return "Plus";
+        case Minus:        return "Minus";
+        case Multiply:     return "Multiply";
+        case Divide:       return "Divide";
+        case Raise:        return "Raise";
+        case LessThan:     return "LessThan";
+        case Equal:        return "Equal";
+        case GreaterThan:  return "GreaterThan";
+        case LTEqual:      return "LTEqual";
+        case GTEqual:      return "GTEqual";
+        case NotEqual:     return "NotEqual";
+        case ERROR:        return "ERROR";
+        case EndofFile:    return "EndofFile";
+
+        // Unique Identifier Tokens
+        case PRINT:        return "PRINT";
+        case IF:           return "IF";
+        case ELSE:         return "ELSE";
+        case ENDIF:        return "ENDIF";
+        case SQRT:         return "SQRT";
+        case AND:          return "AND";
+        case OR:           return "OR";
+        case NOT:          return "NOT";
+
+        default:           return "Unknown";
+    }
 }
 
 static Token makeToken(enum TokenType type, const char *lexeme) {
@@ -154,6 +193,8 @@ Token gettoken(FILE *input, FILE *output) {
                     return writeToken(output, Semicolon, "Semicolon", ";");
                 } else if (c == ',') {
                     return writeToken(output, Comma, "Comma", ",");
+                } else if (c == '=') {
+                    return writeToken(output, Equal, "Equal", "=");
                 } else if (c == '"') {
                     state = STR;
                     if (!appendCharacter(c, &overflow)) {

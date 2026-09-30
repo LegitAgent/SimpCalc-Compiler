@@ -1,8 +1,11 @@
 #include <stdio.h>
+#include <stdbool.h>
 #include "parser.h"
 #include "scanner.h"
+
 FILE *scanner_read, *scanner_write, *parser_write;
 Token currentToken;
+static bool hasError = false;
 
 // static forward declaration, so can resolve function hierarchy
 static void parsePrg();
@@ -27,26 +30,32 @@ static void advance() {
     currentToken = gettoken(scanner_read, scanner_write);
 }
 
-static void getTypeString() {
-    
-}
-
 static void match(enum TokenType expectedType) {
+    if (hasError) return;   
+
     if (currentToken.type == expectedType) {
         advance();
     } else {
-        fprintf(parser_write, "Parse Error on line %d: something expected.", currentToken.line);
+        fprintf(parser_write, "Parse Error on line %d: %s expected.\n", currentToken.line, tokenTypetoString(expectedType));
+        hasError = true;
     }
 }
 
 // non-terminal recursive subroutine functions
 static void parsePrg() {
+    if (hasError) return;
     // Blk EOF
     parseBlk();
-    match(EndofFile);
+    if (hasError) return;
+    if (currentToken.type == EndofFile) {
+        return;
+    }
+    fprintf(parser_write, "Parse Error on line %d: EndofFile expected.\n", currentToken.line);
+    hasError = true;
 }
 
 static void parseBlk() {
+    if (hasError) return;
     // Stm Blk, for {Identifier, PRINT, IF}
     if (currentToken.type == Identifier || currentToken.type == PRINT || currentToken.type == IF) {
         parseStm();
@@ -55,15 +64,16 @@ static void parseBlk() {
 }
 
 static void parseStm() {
+    if (hasError) return;
     switch (currentToken.type) {
         case Identifier:
-            // Identifer := Exp;
+            // Identifer := Exp ;
             match(Identifier);
             match(Assign);
             parseExp();
             match(Semicolon);
 
-            fputs("Assignment Statement Recognized", parser_write);
+            if (!hasError) fputs("Assignment Statement Recognized\n", parser_write);
             break;
         case PRINT:
             // PRINT ( Arg Argfollow ) ;
@@ -74,34 +84,40 @@ static void parseStm() {
             match(RightParen);
             match(Semicolon);
 
-            fputs("Print Statement Recognized", parser_write);
+            if (!hasError) fputs("Print Statement Recognized\n", parser_write);
             break;
         case IF:
             // IF Cnd : BLK Iffollow
             match(IF);
 
-            fputs("If Statement Begins", parser_write);
+            fputs("If Statement Begins\n", parser_write);
 
             parseCnd();
             match(Colon);
             parseBlk();
             parseIffollow();
 
-            fputs("If Statement Ends", parser_write);
+            if (!hasError) fputs("If Statement Ends\n", parser_write);
             break;
         default:
-            fputs("Invalid Statement", parser_write);
+            fputs("Invalid Statement\n", parser_write);
+            hasError = true;
             break;
     }
 }
 
 static void parseArgfollow() {
-    // Arg Argfollow
-    parseArg();
-    parseArgfollow();
+    if (hasError) return;
+    // , Arg Argfollow
+    if (currentToken.type == Comma) {
+        match(Comma);
+        parseArg();
+        parseArgfollow();
+    }
 }
 
 static void parseArg() {
+    if (hasError) return;
     switch (currentToken.type) {
         case String:
             // String
@@ -115,32 +131,36 @@ static void parseArg() {
 }
 
 static void parseIffollow() {
+    if (hasError) return;
     switch (currentToken.type) {
         case ENDIF:
             // ENDIF ;
             match(ENDIF);
-            match(Colon);
+            match(Semicolon);
             break;
         case ELSE:
             // ELSE Blk ENDIF ;
             match(ELSE);
             parseBlk();
             match(ENDIF);
-            match(Colon);
+            match(Semicolon);
             break;
         default:
-            fputs("Incomplete if Statement", parser_write);
+            fputs("Incomplete if Statement\n", parser_write);
+            hasError = true;
             break;
     }
 }
 
 static void parseExp() {
+    if (hasError) return;
     // Trm Trmfollow
     parseTrm();
     parseTrmfollow();
 }
 
 static void parseTrmfollow() {
+    if (hasError) return;
     switch (currentToken.type) {
         case Plus:
             // + Trm Trmfollow
@@ -160,12 +180,14 @@ static void parseTrmfollow() {
 }
 
 static void parseTrm() {
+    if (hasError) return;
     // Fac Facfollow
     parseFac();
     parseFacfollow();
 }
 
 static void parseFacfollow() {
+    if (hasError) return;
     switch (currentToken.type) {
         case Multiply:
             // * Fac Facfollow
@@ -185,12 +207,14 @@ static void parseFacfollow() {
 }
 
 static void parseFac() {
+    if (hasError) return;
     // Lit Litfollow
     parseLit();
     parseLitfollow();
 }
 
 static void parseLitfollow() {
+    if (hasError) return;
     if (currentToken.type == Raise) {
         // ** Lit Litfollow
         match(Raise);
@@ -200,6 +224,7 @@ static void parseLitfollow() {
 }
 
 static void parseLit() {
+    if (hasError) return;
     if (currentToken.type == Minus) {
         // - Val
         match(Minus);
@@ -211,6 +236,7 @@ static void parseLit() {
 }
 
 static void parseVal() {
+    if (hasError) return;
     switch (currentToken.type) {
         case Identifier:
             // Identifier
@@ -227,16 +253,21 @@ static void parseVal() {
             parseExp();
             match(RightParen);
             break;
-        default:
+        case LeftParen:
             // ( Exp )
             match(LeftParen);
             parseExp();
             match(RightParen);
             break;
+        default:
+            fprintf(parser_write, "Parse Error on line %d: value expected.\n", currentToken.line);
+            hasError = true;
+            break;
     }
 }
 
 static void parseCnd() {
+    if (hasError) return;
     // Exp Rel Exp
     parseExp();
     parseRel();
@@ -244,6 +275,7 @@ static void parseCnd() {
 }
 
 static void parseRel() {
+    if (hasError) return;
     switch (currentToken.type) {
         case LessThan:
             // <
@@ -270,18 +302,22 @@ static void parseRel() {
             match(GTEqual);
             break;
         default:
-            fputs("Missing relational operator", parser_write);
+            fputs("Missing relational operator\n", parser_write);
+            hasError = true;
             break;
     }
 }
 
 // read ptr here should be the file of the output file for scanner
-void parser(FILE* scan_read, FILE* scan_write, FILE* parse_write) {
+bool parser(FILE* scan_read, FILE* scan_write, FILE* parse_write) {
     // test, scan parse scan parse
     scanner_read = scan_read;
     scanner_write = scan_write;
     parser_write = parse_write;
 
+    hasError = false;
+
     advance();
     parsePrg();
+    return !hasError;
 }
