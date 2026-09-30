@@ -129,7 +129,7 @@ static Token writeToken(FILE *output, enum TokenType type, const char *name, con
     return token;
 }
 
-// null-terminates the buffer before creating a token from it
+// simplifies writing buffered tokens to the output file
 static Token writeScanLine(FILE *output, enum TokenType type, const char *name) {
     buffer[bufferIdx] = '\0';
     return writeToken(output, type, name, buffer);
